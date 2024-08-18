@@ -21,57 +21,66 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Gerenciamento de Marmitas")
-        self.root.geometry("600x400")
+        self.root.geometry("800x600")
 
         self.create_widgets()
 
     def create_widgets(self):
+        # Cabeçalho
+        self.header = tk.Label(self.root, text="Gerenciamento de Marmitas - Projeto Comunitário", font=("Arial", 16))
+        self.header.grid(row=0, column=0, columnspan=4, padx=10, pady=10)
+
         # Labels e Entradas
         self.label_nome = tk.Label(self.root, text="Nome:")
-        self.label_nome.grid(row=0, column=0, padx=10, pady=10)
+        self.label_nome.grid(row=1, column=0, padx=10, pady=5, sticky="e")
         self.entry_nome = tk.Entry(self.root)
-        self.entry_nome.grid(row=0, column=1, padx=10, pady=10)
+        self.entry_nome.grid(row=1, column=1, padx=10, pady=5, sticky="w")
 
         self.label_telefone = tk.Label(self.root, text="Telefone:")
-        self.label_telefone.grid(row=1, column=0, padx=10, pady=10)
+        self.label_telefone.grid(row=2, column=0, padx=10, pady=5, sticky="e")
         self.entry_telefone = tk.Entry(self.root)
-        self.entry_telefone.grid(row=1, column=1, padx=10, pady=10)
+        self.entry_telefone.grid(row=2, column=1, padx=10, pady=5, sticky="w")
 
         self.label_quantidade = tk.Label(self.root, text="Quantidade:")
-        self.label_quantidade.grid(row=2, column=0, padx=10, pady=10)
+        self.label_quantidade.grid(row=3, column=0, padx=10, pady=5, sticky="e")
         self.entry_quantidade = tk.Entry(self.root)
-        self.entry_quantidade.grid(row=2, column=1, padx=10, pady=10)
+        self.entry_quantidade.grid(row=3, column=1, padx=10, pady=5, sticky="w")
 
         self.label_pagamento = tk.Label(self.root, text="Forma de Pagamento:")
-        self.label_pagamento.grid(row=3, column=0, padx=10, pady=10)
+        self.label_pagamento.grid(row=4, column=0, padx=10, pady=5, sticky="e")
         self.combo_pagamento = ttk.Combobox(self.root, values=["dinheiro", "cartão de crédito", "cartão de débito", "pix"])
-        self.combo_pagamento.grid(row=3, column=1, padx=10, pady=10)
+        self.combo_pagamento.grid(row=4, column=1, padx=10, pady=5, sticky="w")
 
         # Botões
         self.btn_add = tk.Button(self.root, text="Adicionar", command=self.adicionar_registro)
-        self.btn_add.grid(row=4, column=0, padx=10, pady=10)
+        self.btn_add.grid(row=5, column=0, padx=10, pady=10)
 
         self.btn_edit = tk.Button(self.root, text="Editar", command=self.editar_registro)
-        self.btn_edit.grid(row=4, column=1, padx=10, pady=10)
+        self.btn_edit.grid(row=5, column=1, padx=10, pady=10)
 
         self.btn_delete = tk.Button(self.root, text="Apagar", command=self.apagar_registro)
-        self.btn_delete.grid(row=4, column=2, padx=10, pady=10)
+        self.btn_delete.grid(row=5, column=2, padx=10, pady=10)
 
         self.btn_total = tk.Button(self.root, text="Total Vendido", command=self.total_vendido)
-        self.btn_total.grid(row=5, column=0, padx=10, pady=10)
+        self.btn_total.grid(row=6, column=0, padx=10, pady=10)
 
         self.btn_arrecadado = tk.Button(self.root, text="Total Arrecadado", command=self.total_arrecadado)
-        self.btn_arrecadado.grid(row=5, column=1, padx=10, pady=10)
+        self.btn_arrecadado.grid(row=6, column=1, padx=10, pady=10)
 
-        # Tabela
+        # Tabela com barra de rolagem
         self.tree = ttk.Treeview(self.root, columns=("ID", "Nome", "Telefone", "Quantidade", "Pagamento"), show='headings')
         self.tree.heading("ID", text="ID")
         self.tree.heading("Nome", text="Nome")
         self.tree.heading("Telefone", text="Telefone")
         self.tree.heading("Quantidade", text="Quantidade")
         self.tree.heading("Pagamento", text="Pagamento")
-        self.tree.grid(row=6, column=0, columnspan=3, padx=10, pady=10)
+
+        self.tree_scroll = tk.Scrollbar(self.root, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=self.tree_scroll.set)
+        self.tree_scroll.grid(row=7, column=2, sticky="ns")
         
+        self.tree.grid(row=7, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+
         self.carregar_registros()
 
     def carregar_registros(self):
@@ -89,10 +98,11 @@ class App:
     def adicionar_registro(self):
         nome = self.entry_nome.get()
         telefone = self.entry_telefone.get()
-        quantidade = int(self.entry_quantidade.get())
+        quantidade = self.entry_quantidade.get()
         forma_pagamento = self.combo_pagamento.get()
         
-        if nome and telefone and quantidade and forma_pagamento:
+        if nome and telefone and quantidade.isdigit() and forma_pagamento:
+            quantidade = int(quantidade)
             conexao = sqlite3.connect('marmitas.db')
             cursor = conexao.cursor()
             cursor.execute("INSERT INTO registros (nome, telefone, quantidade, forma_pagamento) VALUES (?, ?, ?, ?)", 
@@ -102,19 +112,25 @@ class App:
             self.carregar_registros()
             messagebox.showinfo("Sucesso", "Registro adicionado com sucesso!")
         else:
-            messagebox.showerror("Erro", "Preencha todos os campos!")
+            messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
 
     def editar_registro(self):
-        selected_item = self.tree.selection()[0]
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Erro", "Selecione um registro para editar!")
+            return
+        
+        selected_item = selected_item[0]
         valores = self.tree.item(selected_item, "values")
         registro_id = valores[0]
         
         nome = self.entry_nome.get()
         telefone = self.entry_telefone.get()
-        quantidade = int(self.entry_quantidade.get())
+        quantidade = self.entry_quantidade.get()
         forma_pagamento = self.combo_pagamento.get()
         
-        if nome and telefone and quantidade and forma_pagamento:
+        if nome and telefone and quantidade.isdigit() and forma_pagamento:
+            quantidade = int(quantidade)
             conexao = sqlite3.connect('marmitas.db')
             cursor = conexao.cursor()
             cursor.execute("UPDATE registros SET nome=?, telefone=?, quantidade=?, forma_pagamento=? WHERE id=?", 
@@ -124,10 +140,15 @@ class App:
             self.carregar_registros()
             messagebox.showinfo("Sucesso", "Registro editado com sucesso!")
         else:
-            messagebox.showerror("Erro", "Preencha todos os campos!")
+            messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
 
     def apagar_registro(self):
-        selected_item = self.tree.selection()[0]
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Erro", "Selecione um registro para apagar!")
+            return
+        
+        selected_item = selected_item[0]
         valores = self.tree.item(selected_item, "values")
         registro_id = valores[0]
         
@@ -165,7 +186,6 @@ class App:
             mensagem += f"{forma.capitalize()}: R$ {total:.2f}\n"
         
         messagebox.showinfo("Total Arrecadado", mensagem)
-
 
 if __name__ == "__main__":
     criar_banco()
